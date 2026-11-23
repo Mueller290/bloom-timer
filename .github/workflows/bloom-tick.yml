@@ -41,3 +41,5 @@ jobs:
           git config user.email "bloom-timer@users.noreply.github.com"
           git commit --allow-empty -m "keepalive $(date -u +%Y-%m-%d)"
           git push
+
+# Touch to re-register the schedule with GitHub's scheduler (2026-11-23).
