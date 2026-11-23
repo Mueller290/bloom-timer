@@ -1,0 +1,43 @@
+name: Bloom timer
+
+# Asks Bloom to send any study reminders that are due.
+# GitHub starts this about every 5 minutes; its scheduler can run a few
+# minutes late, which Bloom's send window and duplicate guard absorb.
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+    - cron: '17 3 1 * *'   # monthly keep-alive, see the keepalive job
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Nudge Bloom
+        env:
+          TICK_URL: ${{ secrets.BLOOM_TICK_URL }}
+        run: |
+          if [ -z "$TICK_URL" ]; then
+            echo "The BLOOM_TICK_URL secret is missing." >&2
+            exit 1
+          fi
+          reply=$(curl -fsS --max-time 25 "$TICK_URL")
+          echo "Bloom replied: $reply"
+
+  keepalive:
+    # GitHub switches off scheduled workflows in public repositories after
+    # 60 days without repository activity, so commit something once a month.
+    if: github.event.schedule == '17 3 1 * *'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Empty commit to keep the timer switched on
+        run: |
+          git config user.name "bloom-timer"
+          git config user.email "bloom-timer@users.noreply.github.com"
+          git commit --allow-empty -m "keepalive $(date -u +%Y-%m-%d)"
+          git push
